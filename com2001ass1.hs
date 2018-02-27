@@ -7,9 +7,9 @@
 
 -- If you would like to add your name and/or registration number
 -- to this file, please do so here:
---
---
---
+-- Simon Fish
+-- 160153503
+-- sgfish1@sheffield.ac.uk
 
 type Input  = Int
 type Output = Int
@@ -49,13 +49,17 @@ type Program = [Instruction]
 
 
 
--- PROBLEM 1. YOUR CODE HERE
+-- PROBLEM 1. 
 -- --------------------------
 -- Each instruction in a program refers to one or
 -- more boxes.  What is the highest box number used
 -- anywhere in the program?
+insMaxBoxNum :: Instruction -> Int
+insMaxBoxNum (CLR box) = box
+insMaxBoxNum (INC box) = box
+insMaxBoxNum (JEQ box1 box2 _) = max box1 box2
 maxBoxNum :: Program -> Int
-maxBoxNum ...
+maxBoxNum p = maximum (map insMaxBoxNum p)
 
 
 -- The configuration of a BATcomputer is given once
@@ -67,74 +71,104 @@ data BATConfig = BATConfig {
     } deriving (Eq)
 
     
--- PROBLEM 2. YOUR CODE HERE
+-- PROBLEM 2. 
 -- --------------------------
+-- Make BATConfig an instance of the class Show,
+-- so that configurations look like this when 
+-- displayed on the screen
+-- boxes = <list of box values>; 
+-- counter = <counter value
+
 instance Show BATConfig where
-    ...
+    show (BATConfig boxes counter) = "boxes = " ++ show boxes ++ ";\ncounter = " ++ show counter
 
-
-
+clr :: Int -> [Int] -> [Int]
+clr n boxes = let (xs, (y:ys)) = splitAt n boxes
+                    in xs ++ (0:ys)
+inc :: Int -> [Int] -> [Int]
+inc n boxes = let (xs, (y:ys)) = splitAt n boxes
+                    in xs ++ (y+1:ys)
+jeq :: Int -> Int -> Int -> [Int] -> Int
+jeq n1 n2 t boxes
+  | boxes!!n1 == boxes!!n2 = t
+  | otherwise = 0
+doMove :: Instruction -> cfg -> cfg
+doMove ((CLR box):_) (BATConfig { boxes = b, counter = c }) = (BATConfig (clr box b) (c + 1))
+doMove ((INC box):_) (BATConfig { boxes = b, counter = c }) = (BATConfig (inc box b) (c + 1))
+doMove ((JEQ box box2 target):_) (BATConfig { boxes = b, counter = c }) = (BATConfig b (jeq box box2 target b))
 -- IMPLEMENTING THE BATComputer
 -- ============================
 -- User inputs run from Box 1 onwards. Output is what ends up in Box 1.
 -- Box 0 can be used by programs for calculations.
 instance ProgrammableComputer BATConfig  where
-    -- PROBLEM 3: initialise   :: Program -> [Input] -> cfg
-    initialise ...
-    -- PROBLEM 4: acceptState  :: Program -> cfg -> Bool
-    acceptState ...
-    -- PROBLEM 5: doNextMove   :: Program -> cfg -> cfg
-    doNextMove ...
-    -- PROBLEM 6: runFrom      :: Program -> cfg -> cfg
-    runFrom ...
+    -- PROBLEM 3: 
+    -- initialise   :: Program -> [Input] -> BATConfig
+    initialise program inputs = let boxes   = (0:inputs)
+                                    counter = 0
+                                 in (BATConfig boxes counter)
+    -- PROBLEM 4: 
+    -- acceptState  :: Program -> cfg -> Bool
+    acceptState program config = False
+    -- PROBLEM 5: 
+    -- doNextMove   :: Program -> cfg -> cfg
+    doNextMove p (BATConfig { boxes = b, counter = c }) = doMove p!!c (BATConfig b c)
+    -- PROBLEM 6: 
+    -- runFrom      :: Program -> cfg -> cfg
+    runFrom p (BATConfig { boxes = b, counter = c }) = (doNextMove p (BATConfig b c))
     -- PROBLEM 7: getOutput    :: cfg -> Output
-    getOutput ...
+    getOutput (BATConfig { boxes = (b:bs) }) = b
 
 
 -- This function is included to help with testing. Running
 -- "execute p xs" should show the output generated when
 -- running program p with user input(s) xs  
+
 execute :: Program -> [Input] -> Output
 execute p ins = getOutput ((runProgram p ins) :: BATConfig)
 
 
--- PROBLEM 8. YOUR CODE HERE
+-- PROBLEM 8. 
 -- ---------------------------
 -- start a program at instruction n instead of 0.  In other
 -- words, change Jump instructions from (J x y t) to (J x y (t+n))
 -- and leave all other instructions unchanged.
-transpose :: Int -> Program -> Program
-transpose ...
+
+-- transpose :: Int -> Program -> Program
+-- transpose ...
 
 
 
--- PROBLEM 9. YOUR CODE HERE
+-- PROBLEM 9. 
 -- ---------------------------
 -- join two programs together, so as to run one
 -- after the other
-(*->*) :: Program -> Program -> Program
-p1 *->* p2 = ...
+
+-- (*->*) :: Program -> Program -> Program
+-- p1 *->* p2 = ...
 
 
--- PROBLEM 10. YOUR CODE HERE
+-- PROBLEM 10. 
 -- ---------------------------
 -- program to compute B1 = B1 + B2
-adder :: Program
-adder = ...
+
+-- adder :: Program
+-- adder = ...
     
 
--- PROBLEM 11. YOUR CODE HERE
+-- PROBLEM 11.
 -- ---------------------------
 -- create a program to copy the contents of box m to box n (leave box m unchanged)
-copyBox :: Int -> Int -> Program
-copyBox m n = ...
+
+-- copyBox :: Int -> Int -> Program
+-- copyBox m n = ...
 
 
--- PROBLEM 12. YOUR CODE HERE
+-- PROBLEM 12.
 -- ---------------------------
 -- program to compute B1 = Bx + By
-addXY :: Int -> Int -> Program
-addXY x y = ...
+
+-- addXY :: Int -> Int -> Program
+-- addXY x y = ...
 
 
--- END OF TEMPLATE FILE
+-- END OF ASSIGNMENT
