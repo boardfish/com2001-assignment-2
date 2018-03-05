@@ -22,6 +22,7 @@ type Output = Int
 class (Eq cfg) => ProgrammableComputer cfg where
   initialise   :: Program -> [Input] -> cfg
   getOutput    :: cfg -> Output
+  getBoxes    :: cfg -> [Int]
   acceptState  :: Program -> cfg -> Bool
   doNextMove   :: Program -> cfg -> cfg
   runFrom      :: Program -> cfg -> cfg
@@ -87,15 +88,15 @@ clr n boxes = let (xs, (y:ys)) = splitAt n boxes
                     in xs ++ (0:ys)
 inc :: Int -> [Int] -> [Int]
 inc n boxes = let (xs, (y:ys)) = splitAt n boxes
-                    in xs ++ (y+1:ys)
-jeq :: Int -> Int -> Int -> [Int] -> Int
-jeq n1 n2 t boxes
+                    in xs ++ ((y+1):ys)
+jeq :: Int -> Int -> Int -> [Int] -> Int -> Int
+jeq n1 n2 t boxes counter
   | boxes!!n1 == boxes!!n2 = t
-  | otherwise = 0
-doMove :: Instruction -> cfg -> cfg
-doMove ((CLR box):_) (BATConfig { boxes = b, counter = c }) = (BATConfig (clr box b) (c + 1))
-doMove ((INC box):_) (BATConfig { boxes = b, counter = c }) = (BATConfig (inc box b) (c + 1))
-doMove ((JEQ box box2 target):_) (BATConfig { boxes = b, counter = c }) = (BATConfig b (jeq box box2 target b))
+  | otherwise = counter + 1
+doMove :: Instruction -> BATConfig -> BATConfig
+doMove (CLR box) (BATConfig { boxes = b, counter = c }) = (BATConfig (clr box b) (c + 1))
+doMove (INC box) (BATConfig { boxes = b, counter = c }) = (BATConfig (inc box b) (c + 1))
+doMove (JEQ box box2 target) (BATConfig { boxes = b, counter = c }) = (BATConfig b (jeq box box2 target b c))
 -- IMPLEMENTING THE BATComputer
 -- ============================
 -- User inputs run from Box 1 onwards. Output is what ends up in Box 1.
@@ -108,15 +109,18 @@ instance ProgrammableComputer BATConfig  where
                                  in (BATConfig boxes counter)
     -- PROBLEM 4: 
     -- acceptState  :: Program -> cfg -> Bool
-    acceptState program config = False
+    acceptState program (BATConfig { boxes = b, counter = c }) = (length program) <= c
     -- PROBLEM 5: 
     -- doNextMove   :: Program -> cfg -> cfg
-    doNextMove p (BATConfig { boxes = b, counter = c }) = doMove p!!c (BATConfig b c)
+    doNextMove p (BATConfig { boxes = b, counter = c }) = doMove (p!!c) (BATConfig b c)
     -- PROBLEM 6: 
     -- runFrom      :: Program -> cfg -> cfg
-    runFrom p (BATConfig { boxes = b, counter = c }) = (doNextMove p (BATConfig b c))
+    runFrom p (BATConfig { boxes = b, counter = c }) 
+      | acceptState p (BATConfig { boxes = b, counter = c}) = (BATConfig { boxes = b, counter = c})
+      | otherwise = runFrom p (doNextMove p (BATConfig b c))
     -- PROBLEM 7: getOutput    :: cfg -> Output
-    getOutput (BATConfig { boxes = (b:bs) }) = b
+    getOutput (BATConfig { boxes = (b0:b1:_) }) = b1
+    getBoxes (BATConfig { boxes = b }) = b
 
 
 -- This function is included to help with testing. Running
@@ -125,6 +129,8 @@ instance ProgrammableComputer BATConfig  where
 
 execute :: Program -> [Input] -> Output
 execute p ins = getOutput ((runProgram p ins) :: BATConfig)
+executeDebug :: Program -> [Input] -> [Int]
+executeDebug p ins = getBoxes ((runProgram p ins) :: BATConfig)
 
 
 -- PROBLEM 8. 
