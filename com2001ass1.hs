@@ -172,8 +172,8 @@ adder = [(CLR 3), (JEQ 0 2 6), (INC 0), (INC 1), (INC 3), (JEQ 0 3 1)]
 -- ---------------------------
 -- create a program to copy the contents of box m to box n (leave box m unchanged)
 
--- copyBox :: Int -> Int -> Program
--- copyBox m n = ...
+copyBox :: Int -> Int -> Program
+copyBox m n = [(JEQ m n 6), (CLR n), (JEQ m n 6), (INC n), (INC 0), (JEQ n 0 2)]
 
 
 -- PROBLEM 12.
