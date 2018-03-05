@@ -139,9 +139,13 @@ executeDebug p ins = getBoxes ((runProgram p ins) :: BATConfig)
 -- words, change Jump instructions from (J x y t) to (J x y (t+n))
 -- and leave all other instructions unchanged.
 
--- transpose :: Int -> Program -> Program
--- transpose ...
+transposeInstruction :: Int -> Instruction -> Instruction
+transposeInstruction n (JEQ x y t) = (JEQ x y (t+n))
+transposeInstruction n i = i
 
+transpose :: Int -> Program -> Program
+transpose n (i:ps) = ((transposeInstruction n i):(transpose n ps))
+transpose _ [] = []
 
 
 -- PROBLEM 9. 
