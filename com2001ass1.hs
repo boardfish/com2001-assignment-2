@@ -153,8 +153,10 @@ transpose _ [] = []
 -- join two programs together, so as to run one
 -- after the other
 
--- (*->*) :: Program -> Program -> Program
--- p1 *->* p2 = ...
+(*->*) :: Program -> Program -> Program
+p1 *->* [] = p1
+[] *->* p2 = p2
+p1 *->* p2 = foldr (:) p2 p1 
 
 
 -- PROBLEM 10. 
