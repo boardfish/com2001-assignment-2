@@ -110,7 +110,7 @@ instance ProgrammableComputer BATConfig  where
                                  in (BATConfig boxes counter)
     -- PROBLEM 4: 
     -- acceptState  :: Program -> cfg -> Bool
-    acceptState program (BATConfig { boxes = b, counter = c }) = (length program) <= c
+    acceptState program (BATConfig { boxes = b, counter = c }) = c < 0
     -- PROBLEM 5: 
     -- doNextMove   :: Program -> cfg -> cfg
     doNextMove p (BATConfig { boxes = b, counter = c }) = doMove (p!!c) (BATConfig b c)
@@ -141,7 +141,9 @@ executeDebug p ins = getBoxes ((runProgram p ins) :: BATConfig)
 -- and leave all other instructions unchanged.
 
 transposeInstruction :: Int -> Instruction -> Instruction
-transposeInstruction n (JEQ x y t) = (JEQ x y (t+n))
+transposeInstruction n (JEQ x y t) 
+  | t<0 = (JEQ x y t)
+  | otherwise = (JEQ x y (t+n))
 transposeInstruction n i = i
 
 transpose :: Int -> Program -> Program
@@ -157,7 +159,7 @@ transpose _ [] = []
 (*->*) :: Program -> Program -> Program
 p1 *->* [] = p1
 [] *->* p2 = p2
-p1 *->* p2 = foldr (:) p2 p1 
+p1 *->* p2 = foldr (:) (transpose (length p1) p2) p1 
 
 
 -- PROBLEM 10. 
@@ -165,7 +167,7 @@ p1 *->* p2 = foldr (:) p2 p1
 -- program to compute B1 = B1 + B2
 
 adder :: Program
-adder = [(CLR 3), (JEQ 0 2 6), (INC 0), (INC 1), (INC 3), (JEQ 0 3 1)]
+adder = [(CLR 3), (JEQ 0 2 6), (INC 0), (INC 1), (INC 3), (JEQ 0 3 1), (CLR 3), (CLR 0)]
     
 
 -- PROBLEM 11.
@@ -173,7 +175,7 @@ adder = [(CLR 3), (JEQ 0 2 6), (INC 0), (INC 1), (INC 3), (JEQ 0 3 1)]
 -- create a program to copy the contents of box m to box n (leave box m unchanged)
 
 copyBox :: Int -> Int -> Program
-copyBox m n = [(JEQ m n 6), (CLR n), (JEQ m n 6), (INC n), (INC 0), (JEQ n 0 2)]
+copyBox m n = [(JEQ m n 6), (CLR n), (JEQ m n 6), (INC n), (INC 0), (JEQ n 0 2), (CLR 0)]
 
 
 -- PROBLEM 12.
@@ -181,7 +183,7 @@ copyBox m n = [(JEQ m n 6), (CLR n), (JEQ m n 6), (INC n), (INC 0), (JEQ n 0 2)]
 -- program to compute B1 = Bx + By
 
 -- addXY :: Int -> Int -> Program
--- addXY x y = ...
+addXY x y = copyBox x 1 *->* copyBox y 2 *->* adder
 
 
 -- END OF ASSIGNMENT
