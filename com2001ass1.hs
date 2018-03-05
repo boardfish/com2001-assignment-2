@@ -104,7 +104,8 @@ doMove (JEQ box box2 target) (BATConfig { boxes = b, counter = c }) = (BATConfig
 instance ProgrammableComputer BATConfig  where
     -- PROBLEM 3: 
     -- initialise   :: Program -> [Input] -> BATConfig
-    initialise program inputs = let boxes   = (0:inputs)
+    initialise program inputs = let emptyBoxes = ((maxBoxNum program) - (length inputs))
+                                    boxes   = (0:inputs) ++ (replicate emptyBoxes 0)
                                     counter = 0
                                  in (BATConfig boxes counter)
     -- PROBLEM 4: 
@@ -163,8 +164,8 @@ p1 *->* p2 = foldr (:) p2 p1
 -- ---------------------------
 -- program to compute B1 = B1 + B2
 
--- adder :: Program
--- adder = ...
+adder :: Program
+adder = [(CLR 3), (JEQ 0 2 6), (INC 0), (INC 1), (INC 3), (JEQ 0 3 1)]
     
 
 -- PROBLEM 11.
