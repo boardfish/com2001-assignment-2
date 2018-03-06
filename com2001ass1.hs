@@ -22,7 +22,7 @@ type Output = Int
 class (Eq cfg) => ProgrammableComputer cfg where
   initialise   :: Program -> [Input] -> cfg
   getOutput    :: cfg -> Output
-  getBoxes    :: cfg -> [Int]
+  getBoxes     :: cfg -> [Int]
   acceptState  :: Program -> cfg -> Bool
   doNextMove   :: Program -> cfg -> cfg
   runFrom      :: Program -> cfg -> cfg
@@ -47,8 +47,6 @@ data Instruction
   deriving (Eq, Show)
    
 type Program = [Instruction]
-
-
 
 -- PROBLEM 1. 
 -- --------------------------
@@ -133,7 +131,6 @@ execute p ins = getOutput ((runProgram p ins) :: BATConfig)
 executeDebug :: Program -> [Input] -> [Int]
 executeDebug p ins = getBoxes ((runProgram p ins) :: BATConfig)
 
-
 -- PROBLEM 8. 
 -- ---------------------------
 -- start a program at instruction n instead of 0.  In other
@@ -146,9 +143,19 @@ transposeInstruction n (JEQ x y t)
   | otherwise = (JEQ x y (t+n))
 transposeInstruction n i = i
 
+transposeInstructionWithKey :: Int -> Int -> Instruction -> Instruction
+transposeInstructionWithKey key n (JEQ x y t) 
+  | t<0 = (JEQ x y key)
+  | otherwise = (JEQ x y (t+n))
+transposeInstructionWithKey key n i = i
+
 transpose :: Int -> Program -> Program
 transpose n (i:ps) = ((transposeInstruction n i):(transpose n ps))
 transpose _ [] = []
+
+transposeWithKey :: Int -> Int -> Program -> Program
+transposeWithKey key n (i:ps) = ((transposeInstructionWithKey key n i):(transposeWithKey key n ps))
+transposeWithKey _ _ [] = []
 
 
 -- PROBLEM 9. 
@@ -159,7 +166,7 @@ transpose _ [] = []
 (*->*) :: Program -> Program -> Program
 p1 *->* [] = p1
 [] *->* p2 = p2
-p1 *->* p2 = foldr (:) (transpose (length p1) p2) p1 
+p1 *->* p2 = foldr (:) (transpose (length p1) p2) (transposeWithKey (length p1) 0 p1)
 
 
 -- PROBLEM 10. 
@@ -167,7 +174,7 @@ p1 *->* p2 = foldr (:) (transpose (length p1) p2) p1
 -- program to compute B1 = B1 + B2
 
 adder :: Program
-adder = [(CLR 3), (JEQ 0 2 6), (INC 0), (INC 1), (INC 3), (JEQ 0 3 1), (CLR 3), (CLR 0)]
+adder = [(CLR 3), (JEQ 0 2 6), (INC 0), (INC 1), (INC 3), (JEQ 0 3 1), (CLR 3), (JEQ 0 2 (-1))]
     
 
 -- PROBLEM 11.
@@ -175,15 +182,21 @@ adder = [(CLR 3), (JEQ 0 2 6), (INC 0), (INC 1), (INC 3), (JEQ 0 3 1), (CLR 3), 
 -- create a program to copy the contents of box m to box n (leave box m unchanged)
 
 copyBox :: Int -> Int -> Program
-copyBox m n = [(JEQ m n 6), (CLR n), (JEQ m n 6), (INC n), (INC 0), (JEQ n 0 2), (CLR 0)]
-
+copyBox m n
+  | m == n = []
+  | otherwise = [(JEQ m n 6), (CLR n), (JEQ m n 6), (INC n), (INC 0), (JEQ n 0 2), (CLR 0), (JEQ m n (-1))]
 
 -- PROBLEM 12.
 -- ---------------------------
 -- program to compute B1 = Bx + By
 
 -- addXY :: Int -> Int -> Program
-addXY x y = copyBox x 1 *->* copyBox y 2 *->* adder
+addXY 1 2 = adder
+addXY 2 1 = adder
+addXY x y 
+  | x == 1 = copyBox y 2 *->* adder
+  | y == 2 = copyBox x 2 *->* adder
+  | otherwise = (copyBox x 1 *->* copyBox y 2) *->* adder
 
 
 -- END OF ASSIGNMENT
