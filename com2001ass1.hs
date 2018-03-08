@@ -192,17 +192,15 @@ transposeInstructionWithKey key n (JEQ x y t)
 transposeInstructionWithKey key n i = i
 
 -- transpose is a simple recursion on transposeInstruction.
--- TODO: use a mapping function instead.
 transpose :: Int -> Program -> Program
-transpose n (i:ps) = ((transposeInstruction n i):(transpose n ps))
 transpose _ [] = []
+transpose 0 p = p
+transpose n p = map (transposeInstruction n) p
 
 -- ditto for transposeInstructionWithKey.
--- TODO: use a mapping function instead.
 transposeWithKey :: Int -> Int -> Program -> Program
-transposeWithKey key n (i:ps) = ((transposeInstructionWithKey key n i):(transposeWithKey key n ps))
 transposeWithKey _ _ [] = []
-
+transposeWithKey key n p = map (transposeInstructionWithKey key n) p
 
 -- PROBLEM 9. 
 -- ---------------------------
@@ -247,7 +245,6 @@ copyBox m n
 -- program to compute B1 = Bx + By
 
 -- addXY :: Int -> Int -> Program
--- TODO: Please fix!
 addXY 1 2 = adder -- adding boxes 1 and 2 reduces to adder function
 addXY 2 1 = adder -- ditto
 addXY x 1 = copyBox x 2 *->* adder
