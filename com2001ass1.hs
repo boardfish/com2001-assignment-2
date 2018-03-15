@@ -152,7 +152,8 @@ instance ProgrammableComputer BATConfig where
 -- acceptState  :: Program -> cfg -> Bool
 -- Programs terminate based on a final instruction that asserts that the
 -- necessary condition is fulfilled. This sets the counter to -1 to signal
--- that an accept state has been reached.
+-- that an accept state has been reached. For a program to exit cleanly,
+-- an instruction JEQ that asserts the equality of two boxes should be included.
 
   acceptState program (BATConfig {boxes = b, counter = c}) = c < 0
 
@@ -194,7 +195,7 @@ execute :: Program -> [Input] -> Output
 execute p ins = getOutput ((runProgram p ins) :: BATConfig)
 
 -- executeDebug is an equivalent that outputs the contents of  all 
--- available boxes.
+-- available boxes, using the getBoxes function.
 
 executeDebug :: Program -> [Input] -> [Int]
 executeDebug p ins = getBoxes ((runProgram p ins) :: BATConfig)
@@ -240,6 +241,9 @@ transposeWithKey key n p = map (transposeInstructionWithKey key n) p
 -- join two programs together, so as to run one
 -- after the other
 
+-- Robustness of program is proved by its implementation in copyBox. Case study
+-- added as an appendix at the bottom of the code, since it's quite lengthy
+
 (*->*) :: Program -> Program -> Program
 p1 *->* [] = p1
 [] *->* p2 = p2
@@ -251,10 +255,29 @@ p1 *->* p2 =
 -- ---------------------------
 -- program to compute B1 = B1 + B2
 
+-- TEST CASES
+--
+-- *Main> execute (adder) [1,2,3,4]
+-- 3
+-- PASS: Typical use case.
+-- *Main> execute (adder) [0,0,3,4]
+-- 0
+-- PASS: Use of 0.
+-- *Main> execute (adder) []
+-- 0
+-- PASS: No input - maxBoxNum would be 2, so BATComputer would be initialised tp
+--       have enough boxes to handle adder.
+-- *Main> execute (adder) [1]
+-- 1
+-- PASS: Only one input - process as above.
+-- *Main> execute (adder) [1,0]
+-- 1
+-- PASS: Use of 0.
+
 adder :: Program
 adder =
   [ (CLR 0) -- clear box 0, used to keep track of what's added to 1
-  , (JEQ 0 2 (-1)) -- if box 1 has been incremented box 2 times, stop 
+  , (JEQ 0 2 (-1)) -- if box 1 has been incremented (box 2) times, stop 
   , (INC 0) -- increment box 0
   , (INC 1) -- increment box 1
   , (JEQ 0 0 1) -- test for equality again
@@ -263,6 +286,25 @@ adder =
 -- PROBLEM 11.
 -- ---------------------------
 -- create a program to copy the contents of box m to box n (leave box m unchanged)
+-- 
+-- TEST CASES
+
+-- *Main> executeDebug (copyBox 1 1) [0,1,2,3,4]
+-- [0,1,2,3,4]
+-- PASS: Empty program, should have no effect on the input
+
+-- *Main> executeDebug (copyBox 1 2) [0,1,2,3,4]
+-- [0,0,0,2,3,4]
+-- PASS: executeDebug lists box 0 too, so the contents of box 1 (also 0) have
+--       been copied to box 2.
+
+-- *Main> executeDebug (copyBox 3 5) [0,1,2,3,4]
+-- [0,0,1,2,3,2]
+-- PASS: Self-explanatory
+
+-- *Main> executeDebug (copyBox 0 1) [0,1,2,3,4]
+-- [0,0,1,2,3,4]
+-- PASS: Self-explanatory
 
 copyBox :: Int -> Int -> Program
 copyBox m n
@@ -278,12 +320,52 @@ copyBox m n
 -- ---------------------------
 -- program to compute B1 = Bx + By
 -- addXY :: Int -> Int -> Program
+--
+-- TEST CASES
+--
+-- *Main> executeDebug (addXY 1 2) [1,2,3,4]
+-- [2,3,2,3,4]
+-- PASS: Reduces to adder
+-- *Main> executeDebug (addXY 2 1) [1,2,3,4]
+-- [2,3,2,3,4]
+-- PASS: Reduces to adder
+-- *Main> executeDebug (addXY 3 1) [1,2,3,4]
+-- [3,4,3,3,4]
+-- PASS: Each box contains their index, so the return of 4 is correct. This is
+--       an edge case in which y is 1. If either box used in the original adder
+--       function is used, additional pattern matching is used to ensure that
+--       the original value is not overwritten.
+-- *Main> executeDebug (addXY 2 3) [1,2,3,4]
+-- [2,5,2,3,4]
+-- PASS: Ditto, with x = 2.
+-- *Main> executeDebug (addXY 4 3) [1,2,3,4]
+-- [3,7,3,3,4]
+-- PASS: Expected use.
+-- *Main> executeDebug (addXY 1 1) [1,2,3,4]
+-- [1,2,1,3,4]
+-- PASS: Possible to add a box to itself even with edge cases involved.
+-- *Main> executeDebug (addXY 1 5) [1,2,3,4]
+-- [1,1,1,3,4,0]
+-- PASS: Box that doesn't yet exist is initialised to 0.
 
 addXY 1 2 = adder -- adding boxes 1 and 2 reduces to adder function
-
 addXY 2 1 = adder -- ditto
-
 addXY x 1 = copyBox x 2 *->* adder
 addXY 2 y = copyBox y 1 *->* adder
 addXY x y = (copyBox x 1 *->* copyBox y 2) *->* adder
 -- END OF ASSIGNMENT
+
+-- APPENDIX
+-- TEST CASE FOR *->*
+-- *Main> addXY 3 1
+-- [CLR {box = 2},JEQ {box1 = 3, box2 = 2, target = 4},INC {box = 2},JEQ {box1 = 2, box2 = 2, target = 1},CLR {box = 0},JEQ {box1 = 0, 
+-- box2 = 2, target = -1},INC {box = 0},INC {box = 1},JEQ {box1 = 0, box2 = 0, target = 5}]
+-- *Main> copyBox 3 2
+-- [CLR {box = 2},JEQ {box1 = 3, box2 = 2, target = -1},INC {box = 2},JEQ {box1 = 2, box2 = 2, target = 1}]
+-- *Main> adder
+-- [CLR {box = 0},JEQ {box1 = 0, box2 = 2, target = -1},INC {box = 0},INC {box = 1},JEQ {box1 = 0, box2 = 0, target = 1}]
+-- *Main> copyBox 3 2 *->* adder
+-- [CLR {box = 2},JEQ {box1 = 3, box2 = 2, target = 4},INC {box = 2},JEQ {box1 = 2, box2 = 2, target = 1},CLR {box = 0},JEQ {box1 = 0, 
+-- box2 = 2, target = -1},INC {box = 0},INC {box = 1},JEQ {box1 = 0, box2 = 0, target = 5}]
+-- *Main> (copyBox 3 2 *->* adder) == addXY 3 1
+-- True
